@@ -67,6 +67,17 @@ export interface TypeMatrix {
   engraver: string;
   /** 可用性 */
   availability: MatrixAvailability;
+  /**
+   * 代际：初代 = 1，接替模 = 前代 + 1。
+   * 补刻师傅让新模沿用旧编号，但新旧模是不同实体，用代际区分。
+   */
+  generation: number;
+  /** 世系 id：同一串接替模共享；初代时 lineageId === 自己的 id */
+  lineageId: string;
+  /** 前代字模 id（初代无） */
+  prevMatrixId: string;
+  /** 接替模 id（已建立接替模的旧模指向新一代） */
+  successorMatrixId: string;
   /** 登记备注 */
   note: string;
   createdAt: string;
@@ -117,4 +128,17 @@ export function validateMatrixInput(input: Partial<MatrixInput>): Record<string,
   }
   if (!(input.engraver || '').trim()) errors.engraver = '请填写刻工';
   return errors;
+}
+
+/** 代际文字：初代 / 二代 / 三代 …（兼容旧档案缺失代际字段，按初代处理） */
+export function generationLabel(generation: number | undefined | null): string {
+  const g = Math.max(1, Math.floor(Number(generation) || 1));
+  if (g === 1) return '初代';
+  if (g === 2) return '二代';
+  return `${g}代`;
+}
+
+/** 是否为初代（旧档案没有代际信息时补成初代） */
+export function isFirstGeneration(m: Pick<TypeMatrix, 'generation'>): boolean {
+  return !m.generation || m.generation <= 1;
 }

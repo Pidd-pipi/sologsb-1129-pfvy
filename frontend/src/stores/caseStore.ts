@@ -47,6 +47,7 @@ export const useCaseStore = create<CaseState>((set, get) => ({
       slots: [] as CaseSlot[],
       workStation: input.workStation.trim(),
       matrixId: [] as string[],
+      version: 1,
       createdAt: now,
       updatedAt: now,
     });
@@ -81,6 +82,7 @@ export const useCaseStore = create<CaseState>((set, get) => ({
     const next: Partial<TypeCase> = {
       slots: plainSlots,
       matrixId: matrixIdsOf(plainSlots),
+      version: (current.version ?? 1) + 1,
       updatedAt: new Date().toISOString(),
     };
     await db.cases.update(id, next);

@@ -14,6 +14,7 @@ import {
   MATRIX_FONTS,
   MATRIX_MATERIALS,
   TYPE_SIZES,
+  generationLabel,
   type MatrixAvailability,
 } from '../types/matrix';
 import { CLARITY_LEVELS, IMPRESSION_RANGE, PRESSURE_RANGE } from '../types/proof';
@@ -24,8 +25,10 @@ import { rcKey } from '../utils/layout';
 
 const INFO_ROWS: Array<{ label: string; key: string }> = [
   { label: '字模编号', key: 'code' },
+  { label: '字符', key: 'character' },
   { label: '字体', key: 'font' },
   { label: '字号 / 磅值', key: 'size' },
+  { label: '代际', key: 'generation' },
   { label: '材质', key: 'material' },
   { label: '字面尺寸', key: 'face' },
   { label: '字身高度', key: 'body' },
@@ -52,6 +55,7 @@ export default function MatrixDetail() {
   const pushToast = useUiStore((s) => s.pushToast);
 
   const matrix = matrices.find((m) => m.id === id);
+  const matrixOf = (mid: string) => matrices.find((m) => m.id === mid);
   const matrixDefects = useMemo(
     () => defects.filter((d) => d.matrixId === id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
     [defects, id],
@@ -110,8 +114,10 @@ export default function MatrixDetail() {
 
   const infoValue: Record<string, string> = {
     code: matrix.code,
+    character: matrix.character,
     font: matrix.font,
     size: `${matrix.sizeName} · ${matrix.sizePt} pt`,
+    generation: `${generationLabel(matrix.generation)}（世系 ${matrix.lineageId || matrix.id}）`,
     material: matrix.material,
     face: `${matrix.faceWidthMm} mm`,
     body: `${matrix.bodyHeightMm} mm`,
@@ -231,6 +237,11 @@ export default function MatrixDetail() {
               补刻完成，恢复可用
             </button>
           ) : null}
+          {matrix.availability !== '可用' ? (
+            <Link className="mt-btn" to="/recarves" data-testid="goto-recarves">
+              代际补刻（新模沿用旧编号）
+            </Link>
+          ) : null}
           <button
             type="button"
             className="mt-btn"
@@ -274,6 +285,25 @@ export default function MatrixDetail() {
             <p>缺损记录 {matrixDefects.length} 条</p>
             <p>试印记录 {matrixProofs.length} 条</p>
             <p>所在字盘 {holdings.length} 处</p>
+            <p>
+              代际 {generationLabel(matrix.generation)}
+              {matrix.prevMatrixId ? (
+                <>
+                  {' · '}前代
+                  <Link className="text-seal hover:underline" to={`/matrices/${matrix.prevMatrixId}`}>
+                    {matrixOf(matrix.prevMatrixId)?.code ?? matrix.prevMatrixId}
+                  </Link>
+                </>
+              ) : null}
+              {matrix.successorMatrixId ? (
+                <>
+                  {' · '}接替模
+                  <Link className="text-seal hover:underline" to={`/matrices/${matrix.successorMatrixId}`}>
+                    {matrixOf(matrix.successorMatrixId)?.code ?? matrix.successorMatrixId}
+                  </Link>
+                </>
+              ) : null}
+            </p>
           </div>
           {editing ? (
             <div className="mt-3 space-y-2 border-t border-paper-line pt-3">

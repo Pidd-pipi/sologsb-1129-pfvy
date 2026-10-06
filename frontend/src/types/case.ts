@@ -34,6 +34,11 @@ export interface TypeCase {
    * 由落位操作自动维护，与 slots 中的 matrixId 保持一致。
    */
   matrixId: string[];
+  /**
+   * 字盘版本号：每次落位 / 迁移格位自增。
+   * 代际补刻迁移前核对版本，版本不一致则整批拒绝。
+   */
+  version: number;
   createdAt: string;
   updatedAt: string;
 }

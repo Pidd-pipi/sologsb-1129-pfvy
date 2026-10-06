@@ -10,6 +10,7 @@ const NAV = [
   { to: '/cases', label: '字盘布局', testId: 'nav-cases', end: false },
   { to: '/defects', label: '缺损登记', testId: 'nav-defects', end: false },
   { to: '/proofs', label: '试印记录', testId: 'nav-proofs', end: false },
+  { to: '/recarves', label: '代际补刻', testId: 'nav-recarves', end: false },
 ];
 
 const TOAST_STYLE: Record<string, string> = {

@@ -28,6 +28,11 @@ export interface DefectLog {
   /** 登记人 */
   operator: string;
   note: string;
+  /**
+   * 是否已收口（代际补刻收口记录为 true）。
+   * 收口后该缺损流程了结，接替模方可迁移格位。
+   */
+  closed: boolean;
   createdAt: string;
 }
 

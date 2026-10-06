@@ -5,6 +5,7 @@ import type { DefectSeverity, DefectType } from '../types/defect';
 import type { MatrixAvailability, MatrixFont, MatrixMaterial, TypeMatrix } from '../types/matrix';
 import { ptOfSize } from '../types/matrix';
 import type { ProofRecord } from '../types/proof';
+import type { RecarveBatch } from '../types/recarve';
 import { matrixIdsOf } from '../utils/layout';
 import { suggestCaseCode, suggestMatrixCode, toPlain } from '../utils/format';
 
@@ -15,12 +16,15 @@ export const DB_NAME = 'gbmovabletype-db';
  * v1 建 matrices
  * v2 加 cases 表与 matrixId 索引
  * v3 加 defects / proofs 表，并为停用字模回填缺损原因
+ * v4 加 recarveBatches 代际补刻批次表；为旧字模回填代际（初代）、
+ *    旧字盘回填版本号、旧缺损记录补收口标记
  */
 class MovableTypeDb extends Dexie {
   matrices!: Table<TypeMatrix, string>;
   cases!: Table<TypeCase, string>;
   defects!: Table<DefectLog, string>;
   proofs!: Table<ProofRecord, string>;
+  recarveBatches!: Table<RecarveBatch, string>;
 
   constructor() {
     super(DB_NAME);
@@ -76,6 +80,38 @@ class MovableTypeDb extends Dexie {
             note: '由 v2 → v3 升级自动回填',
             createdAt: new Date().toISOString(),
           });
+        }
+      });
+    this.version(4)
+      .stores({
+        matrices: 'id, code, character, font, sizeName, material, availability, lineageId, successorMatrixId',
+        cases: 'id, code, kind, workStation, *matrixId',
+        defects: 'id, matrixId, defectType, severity, availability, foundDate, closed',
+        proofs: 'id, matrixId, sampleNo, clarity, proofDate',
+        recarveBatches: 'id, sourceMatrixId, successorMatrixId, status, lineageId',
+      })
+      .upgrade(async (tx) => {
+        // v4：旧档案没有代际信息时补成初代；旧字盘补版本号；旧缺损补收口标记
+        const matrices: TypeMatrix[] = await tx.table('matrices').toArray();
+        for (const m of matrices) {
+          const patch: Partial<TypeMatrix> = {};
+          if (!m.generation || m.generation < 1) patch.generation = 1;
+          if (!m.lineageId) patch.lineageId = m.id;
+          if (m.prevMatrixId === undefined) patch.prevMatrixId = '';
+          if (m.successorMatrixId === undefined) patch.successorMatrixId = '';
+          if (Object.keys(patch).length > 0) await tx.table('matrices').update(m.id, patch);
+        }
+        const cases: TypeCase[] = await tx.table('cases').toArray();
+        for (const c of cases) {
+          if (typeof c.version !== 'number' || c.version < 1) {
+            await tx.table('cases').update(c.id, { version: 1 });
+          }
+        }
+        const defects: DefectLog[] = await tx.table('defects').toArray();
+        for (const d of defects) {
+          if (d.closed === undefined) {
+            await tx.table('defects').update(d.id, { closed: false });
+          }
         }
       });
   }
@@ -192,6 +228,10 @@ function buildSeed() {
   const matrices: TypeMatrix[] = SEED_MATRICES.map((m) => ({
     ...m,
     sizePt: ptOfSize(m.sizeName),
+    generation: 1,
+    lineageId: m.id,
+    prevMatrixId: '',
+    successorMatrixId: '',
     createdAt: now,
     updatedAt: now,
   }));
@@ -207,6 +247,7 @@ function buildSeed() {
       slots: toSlots(SEED_CASE_A_SLOTS),
       workStation: '一号排字工位',
       matrixId: matrixIdsOf(toSlots(SEED_CASE_A_SLOTS)),
+      version: 1,
       createdAt: now,
       updatedAt: now,
     },
@@ -219,6 +260,7 @@ function buildSeed() {
       slots: toSlots(SEED_CASE_B_SLOTS),
       workStation: '二号排字工位',
       matrixId: matrixIdsOf(toSlots(SEED_CASE_B_SLOTS)),
+      version: 1,
       createdAt: now,
       updatedAt: now,
     },
@@ -229,6 +271,7 @@ function buildSeed() {
       ...d,
       character: m?.character ?? '',
       matrixCode: m?.code ?? '',
+      closed: false,
       createdAt: now,
     };
   });

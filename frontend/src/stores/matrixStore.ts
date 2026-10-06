@@ -57,8 +57,9 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
   createMatrix: async (input) => {
     const now = new Date().toISOString();
+    const id = makeId('mtx');
     const row: TypeMatrix = toPlain({
-      id: makeId('mtx'),
+      id,
       code: input.code.trim(),
       character: input.character.trim(),
       font: input.font,
@@ -70,6 +71,11 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       madeYear: Number(input.madeYear),
       engraver: input.engraver.trim(),
       availability: '可用' as const,
+      // 新登记字模均为初代，世系 id 指向自己
+      generation: 1,
+      lineageId: id,
+      prevMatrixId: '',
+      successorMatrixId: '',
       note: (input.note ?? '').trim(),
       createdAt: now,
       updatedAt: now,
@@ -122,6 +128,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       availability: input.availability,
       operator: input.operator.trim(),
       note: (input.note ?? '').trim(),
+      closed: false,
       createdAt: new Date().toISOString(),
     });
     await db.defects.add(row);
@@ -152,6 +159,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       availability: '可用' as const,
       operator: operator.trim() || '补刻工',
       note: '补刻收尾记录',
+      closed: false,
       createdAt: new Date().toISOString(),
     });
     await db.defects.add(row);
