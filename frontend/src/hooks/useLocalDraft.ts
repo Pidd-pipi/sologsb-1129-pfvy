@@ -85,4 +85,6 @@ export const DRAFT_KEYS = {
   caseEditor: (caseId: string) => `case-${caseId}`,
   defectBoard: 'defect-new',
   proofNew: 'proof-new',
+  recutStart: 'recut-start',
+  recutBatch: 'recut-batch',
 } as const;

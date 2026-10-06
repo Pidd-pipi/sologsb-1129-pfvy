@@ -8,9 +8,17 @@ export type MatrixFont = (typeof MATRIX_FONTS)[number];
 export const MATRIX_MATERIALS = ['铜模', '木活字', '铅合金'] as const;
 export type MatrixMaterial = (typeof MATRIX_MATERIALS)[number];
 
-/** 可用性：可用 / 停用 / 待补刻 */
-export const MATRIX_AVAILABILITIES = ['可用', '停用', '待补刻'] as const;
+/**
+ * 可用性：
+ * 可用 / 停用 / 待补刻 / 验收中
+ * 「验收中」为代际补刻的接替模专用：接替模沿用旧编号另立新实体，
+ * 在清晰试印与缺损收口两关齐备前不能上盘，故不可用于普通落位。
+ */
+export const MATRIX_AVAILABILITIES = ['可用', '停用', '待补刻', '验收中'] as const;
 export type MatrixAvailability = (typeof MATRIX_AVAILABILITIES)[number];
+
+/** 缺损登记等场景允许人工给出的可用性结论（不含接替模专用的「验收中」） */
+export const DEFECT_AVAILABILITIES: MatrixAvailability[] = ['可用', '停用', '待补刻'];
 
 /** 字号（初号至八号）与对应磅值 */
 export interface TypeSize {
@@ -47,7 +55,7 @@ export const MADE_YEAR_RANGE = { min: 1900, max: 2030 } as const;
 
 export interface TypeMatrix {
   id: string;
-  /** 字模编号，例：ZM-1985-007 */
+  /** 字模编号，例：ZM-1985-007；代际补刻时接替模沿用旧编号 */
   code: string;
   /** 字模上的单个汉字 */
   character: string;
@@ -69,6 +77,12 @@ export interface TypeMatrix {
   availability: MatrixAvailability;
   /** 登记备注 */
   note: string;
+  /** 代际：初代字模为 1，每补刻一代 +1（v4 起记录，旧档案升级时补成初代） */
+  generation: number;
+  /** 同一编号字模谱系 id：初代等于自身 id，接替模沿用初代的 lineageId */
+  lineageId: string;
+  /** 接替模指向其上一代旧模 id；初代字模为空串 */
+  replacesId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -89,6 +103,13 @@ export interface MatrixInput {
   madeYear: number;
   engraver: string;
   note?: string;
+}
+
+/** 中文序数，用于展示代际，例：1 → 初代 */
+export function generationLabel(generation: number): string {
+  if (!Number.isFinite(generation) || generation < 1) return '初代';
+  const labels = ['初代', '二代', '三代', '四代', '五代', '六代', '七代', '八代', '九代'];
+  return labels[generation - 1] ?? `${generation} 代`;
 }
 
 /** 字模登记表单校验：返回逐字段错误信息，空对象表示通过 */

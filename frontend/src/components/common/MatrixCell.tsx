@@ -1,5 +1,6 @@
 import type { DefectLog } from '../../types/defect';
 import type { MatrixAvailability } from '../../types/matrix';
+import { generationLabel } from '../../types/matrix';
 import { radicalOf, strokesOf } from '../../utils/charIndex';
 import { dash } from '../../utils/format';
 import DefectBadge from './DefectBadge';
@@ -12,6 +13,8 @@ export interface MatrixCellProps {
   font?: string;
   material?: string;
   availability?: MatrixAvailability;
+  /** 代际：传入且大于 1 时显示代际角标 */
+  generation?: number;
   /** 该字模最新一条缺损记录，用于缺损角标 */
   defect?: DefectLog | null;
   selected?: boolean;
@@ -24,12 +27,14 @@ const AVAILABILITY_RING: Record<string, string> = {
   可用: 'border-paper-line hover:border-jade',
   停用: 'border-seal/60',
   待补刻: 'border-brass/60',
+  验收中: 'border-brass/70 border-dashed',
 };
 
 const AVAILABILITY_DOT: Record<string, string> = {
   可用: 'bg-jade',
   停用: 'bg-seal',
   待补刻: 'bg-brass',
+  验收中: 'bg-brass',
 };
 
 /** 单字格：渲染字符大样、字号与状态，被总览页 / 字模登记页 / 字模详情页复用 */
@@ -41,6 +46,7 @@ export default function MatrixCell({
   font,
   material,
   availability,
+  generation,
   defect,
   selected = false,
   compact = false,
@@ -91,7 +97,16 @@ export default function MatrixCell({
           {dash(font)} · {dash(material)}
         </span>
       ) : null}
-      {code ? <span className="w-full truncate text-[10px] tracking-wide text-ink-mute">{code}</span> : null}
+      {code ? (
+        <span className="flex w-full items-center justify-center gap-1 text-[10px] tracking-wide text-ink-mute">
+          <span className="truncate">{code}</span>
+          {generation && generation > 1 ? (
+            <span className="shrink-0 rounded-full border border-seal/40 px-1 text-seal" data-testid={`${testId}-gen`}>
+              {generationLabel(generation)}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
       <span className="sr-only">
         部首 {radicalOf(character)} · {strokesOf(character)} 画
       </span>

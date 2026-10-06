@@ -74,6 +74,7 @@ export function useCaseSlots(typeCase: TypeCase | undefined): CaseSlotsApi {
       col,
       character: matrix.character,
       matrixId: matrix.id,
+      matrixGen: matrix.generation ?? 1,
       placedAt: new Date().toISOString(),
     };
     setSlots((cur) => placeSlot(cur, slot));

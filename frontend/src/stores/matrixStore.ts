@@ -57,8 +57,9 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
   createMatrix: async (input) => {
     const now = new Date().toISOString();
+    const id = makeId('mtx');
     const row: TypeMatrix = toPlain({
-      id: makeId('mtx'),
+      id,
       code: input.code.trim(),
       character: input.character.trim(),
       font: input.font,
@@ -71,6 +72,9 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       engraver: input.engraver.trim(),
       availability: '可用' as const,
       note: (input.note ?? '').trim(),
+      generation: 1,
+      lineageId: id,
+      replacesId: '',
       createdAt: now,
       updatedAt: now,
     });

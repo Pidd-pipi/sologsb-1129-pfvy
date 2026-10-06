@@ -6,14 +6,17 @@ import LayoutGrid from '../components/common/LayoutGrid';
 import MatrixCell from '../components/common/MatrixCell';
 import { useMatrixStore } from '../stores/matrixStore';
 import { findCaseHolding, useCaseStore } from '../stores/caseStore';
+import { useRecutStore } from '../stores/recutStore';
 import { useUiStore } from '../stores/uiStore';
 import { DEFECT_SEVERITIES, DEFECT_TYPES, validateDefectInput } from '../types/defect';
 import type { DefectSeverity, DefectType } from '../types/defect';
 import {
+  DEFECT_AVAILABILITIES,
   MATRIX_AVAILABILITIES,
   MATRIX_FONTS,
   MATRIX_MATERIALS,
   TYPE_SIZES,
+  generationLabel,
   type MatrixAvailability,
 } from '../types/matrix';
 import { CLARITY_LEVELS, IMPRESSION_RANGE, PRESSURE_RANGE } from '../types/proof';
@@ -24,6 +27,7 @@ import { rcKey } from '../utils/layout';
 
 const INFO_ROWS: Array<{ label: string; key: string }> = [
   { label: '字模编号', key: 'code' },
+  { label: '代际', key: 'generation' },
   { label: '字体', key: 'font' },
   { label: '字号 / 磅值', key: 'size' },
   { label: '材质', key: 'material' },
@@ -49,6 +53,7 @@ export default function MatrixDetail() {
   const repairMatrix = useMatrixStore((s) => s.repairMatrix);
   const removeMatrix = useMatrixStore((s) => s.removeMatrix);
   const cases = useCaseStore((s) => s.cases);
+  const recuts = useRecutStore((s) => s.recuts);
   const pushToast = useUiStore((s) => s.pushToast);
 
   const matrix = matrices.find((m) => m.id === id);
@@ -61,6 +66,24 @@ export default function MatrixDetail() {
     [proofs, id],
   );
   const holdings = useMemo(() => findCaseHolding(cases, id), [cases, id]);
+
+  /** 同一编号谱系内的各代字模（旧模与接替模），按代际排序 */
+  const lineage = useMemo(
+    () =>
+      matrices
+        .filter((m) => (m.lineageId || m.id) === (matrix?.lineageId || id))
+        .sort((a, b) => (a.generation ?? 1) - (b.generation ?? 1)),
+    [matrices, matrix, id],
+  );
+  const relatedRecut = useMemo(
+    () =>
+      recuts.find(
+        (j) =>
+          (j.oldMatrixId === id || j.successorMatrixId === id) &&
+          (j.status === '待验收' || j.status === '待迁移'),
+      ),
+    [recuts, id],
+  );
 
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -110,6 +133,7 @@ export default function MatrixDetail() {
 
   const infoValue: Record<string, string> = {
     code: matrix.code,
+    generation: generationLabel(matrix.generation ?? 1),
     font: matrix.font,
     size: `${matrix.sizeName} · ${matrix.sizePt} pt`,
     material: matrix.material,
@@ -226,9 +250,17 @@ export default function MatrixDetail() {
           <span className="mt-chip" data-testid="detail-availability">
             当前状态：{matrix.availability}
           </span>
-          {matrix.availability !== '可用' ? (
+          <span className="mt-chip border-ink/20" data-testid="detail-generation">
+            {generationLabel(matrix.generation ?? 1)}
+          </span>
+          {matrix.availability === '验收中' || relatedRecut ? (
+            <Link className="mt-btn mt-btn-primary" to="/recuts" data-testid="goto-recut">
+              {matrix.availability === '验收中' ? '去完成补刻验收' : '查看补刻工程'}
+            </Link>
+          ) : null}
+          {matrix.availability !== '可用' && matrix.availability !== '验收中' ? (
             <button type="button" className="mt-btn mt-btn-primary" data-testid="repair-btn" onClick={handleRepair}>
-              补刻完成，恢复可用
+              就地补刻，恢复可用
             </button>
           ) : null}
           <button
@@ -267,6 +299,7 @@ export default function MatrixDetail() {
             font={matrix.font}
             material={matrix.material}
             availability={matrix.availability}
+            generation={matrix.generation ?? 1}
             defect={matrixDefects[0] ?? null}
             testId="detail-cell"
           />
@@ -379,6 +412,42 @@ export default function MatrixDetail() {
               </div>
             )}
           </div>
+
+          <div className="border-t border-paper-line px-4 py-3" data-testid="lineage-panel">
+            <h4 className="mb-2 font-song text-sm font-semibold text-ink">代际谱系（同编号 {lineage.length} 枚实体）</h4>
+            <ul className="space-y-1">
+              {lineage.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex flex-wrap items-center gap-2 text-xs text-ink-soft"
+                  data-testid={`lineage-item-${m.id}`}
+                >
+                  <span className="mt-chip">{generationLabel(m.generation ?? 1)}</span>
+                  <span className="font-song text-sm text-ink">{m.character}</span>
+                  <span className="text-ink-mute">{m.code}</span>
+                  <span>{m.availability}</span>
+                  <span className="text-ink-mute">{m.madeYear} 年 · {m.engraver}</span>
+                  {m.id === matrix.id ? (
+                    <span className="text-seal" data-testid="lineage-current">
+                      当前查看
+                    </span>
+                  ) : (
+                    <Link className="text-seal hover:underline" to={`/matrices/${m.id}`} data-testid={`lineage-link-${m.id}`}>
+                      查看该代
+                    </Link>
+                  )}
+                  {m.generation > 1 && m.replacesId ? (
+                    <span className="text-ink-mute">
+                      接替 <Link className="text-seal hover:underline" to={`/matrices/${m.replacesId}`}>上一代旧模</Link>
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[11px] text-ink-mute">
+              代际补刻只迁移在盘格位：旧模、旧缺损与旧试印样张始终保留在原实体上，切换各代即可回溯。
+            </p>
+          </div>
         </div>
       </section>
 
@@ -477,7 +546,7 @@ export default function MatrixDetail() {
                     setDefectForm((p) => ({ ...p, availability: e.target.value as MatrixAvailability }))
                   }
                 >
-                  {MATRIX_AVAILABILITIES.map((a) => (
+                  {DEFECT_AVAILABILITIES.map((a) => (
                     <option key={a} value={a}>
                       {a}
                     </option>

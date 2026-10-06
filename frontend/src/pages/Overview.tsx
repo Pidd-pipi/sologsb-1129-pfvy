@@ -239,6 +239,7 @@ export default function Overview() {
                   font={m.font}
                   material={m.material}
                   availability={m.availability}
+                  generation={m.generation ?? 1}
                   defect={defect}
                   testId={`matrix-card-${m.id}`}
                 />

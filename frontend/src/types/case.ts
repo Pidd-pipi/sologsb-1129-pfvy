@@ -14,6 +14,8 @@ export interface CaseSlot {
   col: number;
   character: string;
   matrixId: string;
+  /** 落位字模的代际（用于代际补刻后核对格位上的是哪一代），v4 起补记，旧格位补为初代 */
+  matrixGen: number;
   /** 落位时间 */
   placedAt: string;
 }
@@ -34,6 +36,11 @@ export interface TypeCase {
    * 由落位操作自动维护，与 slots 中的 matrixId 保持一致。
    */
   matrixId: string[];
+  /**
+   * 布局版本号（乐观锁）：每次格位落库 +1。
+   * 代际补刻批量迁移前核对该版本，两个标签页同时提交时过期的一份整批拒绝。
+   */
+  version: number;
   createdAt: string;
   updatedAt: string;
 }

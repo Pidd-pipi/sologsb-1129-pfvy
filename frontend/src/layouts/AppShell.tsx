@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCaseStore } from '../stores/caseStore';
 import { useMatrixStore } from '../stores/matrixStore';
+import { useRecutStore } from '../stores/recutStore';
 import { useUiStore } from '../stores/uiStore';
 
 const NAV = [
@@ -9,6 +10,7 @@ const NAV = [
   { to: '/matrices/new', label: '字模登记', testId: 'nav-matrix-new', end: false },
   { to: '/cases', label: '字盘布局', testId: 'nav-cases', end: false },
   { to: '/defects', label: '缺损登记', testId: 'nav-defects', end: false },
+  { to: '/recuts', label: '代际补刻', testId: 'nav-recuts', end: false },
   { to: '/proofs', label: '试印记录', testId: 'nav-proofs', end: false },
 ];
 
@@ -30,13 +32,17 @@ export default function AppShell() {
     (s) => s.matrices.filter((m) => m.availability === '待补刻').length,
   );
   const caseCount = useCaseStore((s) => s.cases.length);
+  const acceptingCount = useRecutStore((s) => s.recuts.filter((j) => j.status === '待验收').length);
+  const migratingCount = useRecutStore((s) => s.recuts.filter((j) => j.status === '待迁移').length);
+  const recutLoad = useRecutStore((s) => s.load);
   const toast = useUiStore((s) => s.toast);
   const clearToast = useUiStore((s) => s.clearToast);
 
   useEffect(() => {
     void loadMatrices();
     void loadCases();
-  }, [loadMatrices, loadCases]);
+    void recutLoad();
+  }, [loadMatrices, loadCases, recutLoad]);
 
   useEffect(() => {
     if (!toast) return;
@@ -92,6 +98,9 @@ export default function AppShell() {
             </span>
             <span className="mt-chip border-brass/40 text-brass" data-testid="count-repair">
               待补刻 {repairCount}
+            </span>
+            <span className="mt-chip border-seal/40 text-seal" data-testid="count-recut">
+              补刻中 {acceptingCount + migratingCount}
             </span>
           </div>
         </div>

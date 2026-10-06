@@ -14,7 +14,7 @@ import {
   type DefectSeverity,
   type DefectType,
 } from '../types/defect';
-import { MATRIX_AVAILABILITIES, type MatrixAvailability } from '../types/matrix';
+import { DEFECT_AVAILABILITIES, type MatrixAvailability } from '../types/matrix';
 import { countBy, dash, formatDate, todayStr } from '../utils/format';
 
 interface DefectFormState {
@@ -129,6 +129,9 @@ export default function DefectBoard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link className="mt-btn mt-btn-primary" to="/recuts" data-testid="goto-recuts">
+            代际补刻：建立接替模
+          </Link>
           <span className="mt-chip" data-testid="defect-total">
             缺损记录 {defects.length} 条
           </span>
@@ -236,7 +239,7 @@ export default function DefectBoard() {
                 value={draft.availability}
                 onChange={(e) => patch({ availability: e.target.value as MatrixAvailability })}
               >
-                {MATRIX_AVAILABILITIES.map((a) => (
+                {DEFECT_AVAILABILITIES.map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>
@@ -352,17 +355,23 @@ export default function DefectBoard() {
                       <Link className="mt-btn" to={`/matrices/${m.id}`} data-testid={`pending-detail-${m.id}`}>
                         查看详情
                       </Link>
-                      <button
-                        type="button"
-                        className="mt-btn mt-btn-primary"
-                        data-testid={`repair-${m.id}`}
-                        onClick={async () => {
-                          await repairMatrix(m.id, draft.operator || '补刻工 陈之安');
-                          pushToast(`「${m.character}」补刻完成，恢复可用`);
-                        }}
-                      >
-                        补刻完成
-                      </button>
+                      {m.availability === '验收中' ? (
+                        <Link className="mt-btn mt-btn-primary" to="/recuts" data-testid={`pending-recut-${m.id}`}>
+                          去补刻验收
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          className="mt-btn mt-btn-primary"
+                          data-testid={`repair-${m.id}`}
+                          onClick={async () => {
+                            await repairMatrix(m.id, draft.operator || '补刻工 陈之安');
+                            pushToast(`「${m.character}」补刻完成，恢复可用`);
+                          }}
+                        >
+                          补刻完成
+                        </button>
+                      )}
                     </div>
                   </li>
                 );

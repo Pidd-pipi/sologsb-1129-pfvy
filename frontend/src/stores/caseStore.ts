@@ -47,6 +47,7 @@ export const useCaseStore = create<CaseState>((set, get) => ({
       slots: [] as CaseSlot[],
       workStation: input.workStation.trim(),
       matrixId: [] as string[],
+      version: 1,
       createdAt: now,
       updatedAt: now,
     });
@@ -67,11 +68,16 @@ export const useCaseStore = create<CaseState>((set, get) => ({
       const check = validateCapacity(rows, cols, slots);
       if (check.overCapacity) throw new Error(check.message);
     }
+    // 直接带布局落库同样推进版本号，保持迁移前乐观锁核对有效
+    if (plain.slots) {
+      const current = get().cases.find((c) => c.id === id);
+      next.version = (current?.version ?? 0) + 1;
+    }
     await db.cases.update(id, next);
     set((s) => ({ cases: s.cases.map((c) => (c.id === id ? { ...c, ...next } : c)) }));
   },
 
-  /** 保存格位布局：同时刷新 matrixId 多值索引，便于按字模反查字盘 */
+  /** 保存格位布局：同时刷新 matrixId 多值索引，便于按字模反查字盘；布局版本号 +1 */
   saveSlots: async (id, slots) => {
     const current = get().cases.find((c) => c.id === id);
     if (!current) throw new Error('未找到字盘');
@@ -81,6 +87,7 @@ export const useCaseStore = create<CaseState>((set, get) => ({
     const next: Partial<TypeCase> = {
       slots: plainSlots,
       matrixId: matrixIdsOf(plainSlots),
+      version: (current.version ?? 0) + 1,
       updatedAt: new Date().toISOString(),
     };
     await db.cases.update(id, next);
